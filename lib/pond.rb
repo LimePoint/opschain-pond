@@ -17,6 +17,7 @@ class Pond
     timeout: 1,
     collection: :queue,
     detach_if: DEFAULT_DETACH_IF,
+    idle_timeout: 120,
     &block
   )
     @block   = block
@@ -25,17 +26,21 @@ class Pond
 
     @allocated = {}
     @available = Array.new(eager ? maximum_size : 0, &block)
+    @last_used = {}
 
     self.timeout      = timeout
     self.collection   = collection
     self.detach_if    = detach_if
     self.maximum_size = maximum_size
+    self.idle_timeout = idle_timeout
+
+    @connection_manager = Thread.new { monitor_connections }
   end
 
   def checkout(scope: nil, &block)
     raise "Can't checkout with a non-frozen scope" unless scope.frozen?
 
-    if object = current_object(scope: scope)
+    if (object = current_object(scope: scope))
       yield object
     else
       checkout_object(scope: scope, &block)
@@ -69,7 +74,24 @@ class Pond
     sync { @detach_if = callable }
   end
 
+  def idle_timeout=(idle_timeout)
+    raise "Bad value for Pond idle_timeout: #{idle_timeout.inspect}" unless Numeric === idle_timeout && idle_timeout >= 0
+    sync { @idle_timeout = idle_timeout }
+  end
+
   private
+
+  def monitor_connections
+    while true do
+      sync do
+        @last_used.filter { |_k,v| Time.now - v >= @timeout }
+                  .each_key do |k|
+          @available.delete(k).then { _1&.finish }
+        end
+      end
+      sleep 1
+    end
+  end
 
   def checkout_object(scope:)
     lock_object(scope: scope)
@@ -85,7 +107,7 @@ class Pond
       raise Timeout if (time_left = deadline - Time.now) < 0
 
       sync do
-        if object = get_object(time_left)
+        if (object = get_object(time_left))
           set_current_object(object, scope: scope)
         end
       end
@@ -118,6 +140,7 @@ class Pond
     ensure
       sync do
         @available << object if detach_check_finished && should_return_object
+        @last_used[object] = Time.now
         @allocated[scope].delete(Thread.current)
         @cv.signal
       end
