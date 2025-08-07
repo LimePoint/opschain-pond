@@ -1,3 +1,8 @@
+### 0.6.0 (2025-08-08)
+
+*   Add logic to support releasing idle connections from the pool.
+*   Remove rubysl dependency
+
 ### 0.5.0 (2020-09-04)
 
 *   Silence warnings on Ruby 2.7 (boof)
