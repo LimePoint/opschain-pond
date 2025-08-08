@@ -4,14 +4,15 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'pond/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'pond'
+  spec.name          = 'opschain-pond'
   spec.version       = Pond::VERSION
-  spec.authors       = ["Chris Hanks"]
-  spec.email         = ["christopher.m.hanks@gmail.com"]
-  spec.description   = %q{A simple, generic, thread-safe pool for connections or whatever else}
-  spec.summary       = %q{A simple, generic, thread-safe pool}
-  spec.homepage      = 'https://github.com/chanks/pond'
-  spec.license       = 'MIT'
+  spec.authors       = ['LimePoint Pty Ltd']
+  spec.email         = ['support@limepoint.com']
+
+  spec.description   = %q{Based on Chris Hanks (https://github.com/chanks/pond) connection pool Gem, with the inclusion of an idle timeout feature.}
+  spec.summary       = %q{A simple, generic, thread-safe pool with idle timeout.}
+  spec.homepage      = 'https://github.com/limepoint/opschain-pond'
+  spec.license       = 'LimePoint End User Licence Agreement (EULA). Proprietary.'
 
   spec.files         = `git ls-files`.split($/)
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
