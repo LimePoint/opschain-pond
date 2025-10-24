@@ -38,3 +38,4 @@ jobs:
           GEM_HOST_API_KEY: ${{ secrets.GEM_HOST_API_KEY }}
         run: |
           gem push pkg/*.gem -k rubygems --host https://artifactory.limepoint.engineering/artifactory/api/gems/opschain
+          gem push pkg/*.gem -k rubygems --host https://artifactory.limepoint.engineering/artifactory/api/gems/opschain-release
