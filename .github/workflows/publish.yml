@@ -1,0 +1,44 @@
+name: Build and publish to artifactory
+
+on:
+  # Triggers the workflow on push to master
+  push:
+    branches: [master, workflow]
+    tags: ['*']
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.6'
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Install gem release and bump version
+        run: |
+          major_version="$(ruby -I lib/pond -r version -e 'puts Pond::VERSION')"
+          new_version="${major_version}.$(date +%y%m%d.%H%M%S)"
+          gem install gem-release
+          gem bump -v ${new_version} --no-commit
+
+      - name: Build gem
+        run: bundle exec rake build
+
+      - name: Push gem to Artifactory
+        env:
+          BUNDLE_ARTIFACTORY__LIMEPOINT__ENGINEERING: ${{ secrets.GEM_HOST_API_KEY }}
+          GEM_HOST_API_KEY: ${{ secrets.GEM_HOST_API_KEY }}
+        run: |
+          gem push pkg/*.gem -k rubygems --host https://artifactory.limepoint.engineering/artifactory/api/gems/opschain
+          gem push pkg/*.gem -k rubygems --host https://artifactory.limepoint.engineering/artifactory/api/gems/opschain-release
