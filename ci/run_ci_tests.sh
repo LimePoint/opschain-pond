@@ -17,13 +17,18 @@ docker run -i --rm -v $(pwd):/opt/opschain -w /opt/opschain -e BUNDLE_PATH=.bund
 git reset --hard # to keep gem-release happy - there are some diff-index issues in the shebang script
 
 run_docker="docker run -i --rm -v $(pwd):/opt/opschain -w /opt/opschain -e BUNDLE_PATH=.bundle/path -e BUNDLE_JOBS=20 ruby:${ruby_version}"
-version_file_path="lib/pond"
-current_version="$(${run_docker} ruby -I ${version_file_path} -r version -e 'puts Pond::VERSION')"
-prerelease_version=".${CI_BUILD_NUMBER}"
 
-if [ "${CI_BRANCH_NAME}" != master ]; then
-  branch="${CI_BRANCH_NAME}"
-  prerelease_version="-${branch//[^a-zA-Z0-9]/}${prerelease_version}" # replace the branch to match https://github.com/rubygems/rubygems/blob/a9b3694abd272ecba32e0d9698496b7e7ea834c4/lib/rubygems/version.rb#L157 (the prerelease bit) - we could allow `-` if we wanted but it splits the prerelease bit with dots then
+# Generate version in format: major_version.yymmdd.hhMMss
+# Example: 400.251024.102030 for October 24, 2025 at 10:20:30
+version_file_path="lib/pond"
+major_version="$(${run_docker} ruby -I ${version_file_path} -r version -e 'puts Pond::VERSION')"
+new_version="${major_version}.$(date +%y%m%d.%H%M%S)"
+
+if [ "${CI_BRANCH_NAME}" != "OpsChain_Rel_4.0.0" ]; then
+  branch_name="${CI_BRANCH_NAME}"
+  # For non-release branches, append branch name as prerelease identifier
+  # Example: 400.251024.102030-feature
+  new_version="${new_version}-${branch_name//[^a-zA-Z0-9]/}"
 fi
 
-${run_docker} sh -ec "git config --global --add safe.directory /opt/opschain && gem install gem-release && gem bump --file ${version_file_path}/version.rb -v ${current_version}${prerelease_version} --no-commit && bundle exec rake build"
+${run_docker} sh -ec "git config --global --add safe.directory /opt/opschain && gem install gem-release && gem bump --file ${version_file_path}/version.rb -v ${new_version} --no-commit && bundle exec rake build"
