@@ -1,3 +1,11 @@
+### Unreleased
+
+*   Fix `monitor_connections` evicting idle objects based on `timeout` (the
+    checkout-wait setting, default 1 second) instead of `idle_timeout` (the
+    intended idle-eviction setting, default 120 seconds). Previously, any
+    object idle in the pool for roughly 1-2 seconds was closed and removed
+    regardless of the configured `idle_timeout`.
+
 ### 0.6.0 (2025-08-08)
 
 *   Add logic to support releasing idle connections from the pool.

@@ -84,7 +84,7 @@ class Pond
   def monitor_connections
     while true do
       sync do
-        @last_used.filter { |_k,v| Time.now - v >= @timeout }
+        @last_used.filter { |_k,v| Time.now - v >= @idle_timeout }
                   .each_key do |k|
           @available.delete(k).then { _1&.finish }
         end
