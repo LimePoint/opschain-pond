@@ -71,6 +71,10 @@ Options:
 * :detach_if - Set this to a callable object that can determine whether
   objects should be returned to the pool or not. See the following example for
   more information.
+* :healthy_if - Set this to a callable object that determines whether a pooled
+  object is still usable before it is handed to a caller. See the following
+  example for more information. The default is nil, meaning no check is
+  performed.
 
 ### Detaching Objects
 
@@ -94,6 +98,32 @@ the pool, it will be passed to that lambda to see if it should be detached or
 not. If the lambda returns truthy, the connection will be detached (and made
 available for garbage collection), and a new one will be instantiated to
 replace it as necessary (until the pool returns to its maximum size).
+
+### Health-Checking Objects
+
+`detach_if` runs when an object is checked *back in*, but a connection can also
+be closed out-of-band (by the server, a proxy, or a network reset) while it
+sits idle in the pool. `healthy_if` guards against this by validating a pooled
+object as it is checked *out*: if the callable returns falsey, the object is
+discarded (and its `#finish` method called, if it has one) and another is
+obtained or a fresh one instantiated in its place. For example, with
+PostgreSQL connections:
+
+```ruby
+require 'pond'
+require 'pg'
+
+$pg_pond = Pond.new(:healthy_if => lambda {|c| !c.finished? && c.status == PG::CONNECTION_OK}) do
+  PG.connect(:dbname => "pond_test")
+end
+```
+
+The callable is invoked once per checkout, so it should be a fast, local check
+(inspecting connection state), not one that performs I/O such as a `SELECT 1`
+round-trip. It should not raise: any exception it raises is treated the same as
+returning falsey (the object is discarded), but the error is logged to stderr so
+that a bug in the callable is diagnosable rather than silently churning every
+object in the pool.
 
 ## Contributing
 
